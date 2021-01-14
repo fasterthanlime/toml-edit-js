@@ -1,0 +1,10 @@
+[package]
+name = "okay"
+version = "sure"
+
+[dependencies.tokio]
+version = "0.1.4"
+
+[dev-dependencies]
+tokio = { version = "0.1.4", features = ["rt-multi-thread"] }
+
