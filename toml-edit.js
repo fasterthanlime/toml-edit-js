@@ -1,41 +1,24 @@
 //@ts-check
 
 const TOMLParser = require("@iarna/toml/lib/toml-parser");
-const { exception } = require("console");
-const _taggedString = Symbol("__TAGGED_STRING");
-const _taggedValue = "__TAGGED_VALUE";
+const _taggedValue = Symbol("__TAGGED_VALUE");
 
 class TaggedTOMLParser extends TOMLParser {
   parseValue() {
-    if (!this.state.start) {
-      this.state.start = this.pos - 1;
+    if (!this.state.__TAGGED_START) {
+      this.state.__TAGGED_START = this.pos - 1;
     }
     console.log(
       "!!! parseValue, start is",
-      this.state.start,
+      this.state.__TAGGED_START,
       "stack is",
       this.stack.map((state) => state.parser)
     );
     return super.parseValue();
   }
 
-  // parseBasicString() {
-  //   if (!this.state.start) {
-  //     this.state.start = this.pos - 1;
-  //   }
-  //   console.log(
-  //     "!!! parseBasicString, start is",
-  //     this.state.start,
-  //     "stack is",
-  //     this.stack.map((state) => state.parser)
-  //   );
-  //   // let res = this.parseTaggedString(super.parseBasicString);
-  //   // return res;
-  //   return super.parseBasicString();
-  // }
-
   call(fn, returnWith) {
-    let oldStart = this.state.start;
+    let oldStart = this.state.__TAGGED_START;
     super.call(fn, returnWith);
     if (oldStart) {
       console.log(
@@ -46,13 +29,13 @@ class TaggedTOMLParser extends TOMLParser {
         "setting start to",
         oldStart
       );
-      this.stack[this.stack.length - 1].start = oldStart;
+      this.stack[this.stack.length - 1].__TAGGED_START = oldStart;
     }
   }
 
   next(fn) {
     let oldState = this.state;
-    let oldStart = this.state.start;
+    let oldStart = this.state.__TAGGED_START;
     super.next(fn);
     if (oldStart) {
       console.log(
@@ -63,7 +46,7 @@ class TaggedTOMLParser extends TOMLParser {
         "setting start to",
         oldStart
       );
-      this.state.start = oldStart;
+      this.state.__TAGGED_START = oldStart;
     }
   }
 
@@ -84,31 +67,22 @@ class TaggedTOMLParser extends TOMLParser {
       "with value",
       JSON.stringify(this.state.returned, null, 2),
       "start was",
-      oldState.start,
+      oldState.__TAGGED_START,
       "pos is now",
       this.pos
     );
 
-    if (oldState.start) {
-      console.log("while returning, had oldState.start", oldState.start);
+    if (oldState.__TAGGED_START) {
+      console.log(
+        "while returning, had oldState.start",
+        oldState.__TAGGED_START
+      );
       this.state.returned = {
         [_taggedValue]: true,
-        start: oldState.start,
+        start: oldState.__TAGGED_START,
         end: this.pos,
         value: this.state.returned,
       };
-    }
-  }
-
-  parseTaggedMultiEnd(fn) {
-    let beforeStackSize = this.stack.length;
-    let ret = this.state.returned;
-    fn.call(this);
-    if (this.stack.length !== beforeStackSize) {
-      /// we returned, make sure this is still a tagged string
-      this.state.returned = ret;
-      /// the closing delimiter is three characters
-      ret.end = this.pos - 3;
     }
   }
 }
