@@ -6,7 +6,7 @@ const { replaceTomlString } = require("./toml-edit");
 const TOML = require("@iarna/toml");
 
 function main() {
-  for (const n of [1, 2, 3, 4]) {
+  for (const n of [1, 2, 3, 4, 5, 7]) {
     tryUpgrade(`samples/sample${n}.toml`, "tokio", "2.0");
   }
 
