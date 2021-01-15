@@ -3,16 +3,36 @@
 const TOMLParser = require("@iarna/toml/lib/toml-parser");
 const { exception } = require("console");
 const _taggedString = Symbol("__TAGGED_STRING");
+const _taggedValue = "__TAGGED_VALUE";
 
 class TaggedTOMLParser extends TOMLParser {
-  parseBasicString() {
+  parseValue() {
     if (!this.state.start) {
       this.state.start = this.pos - 1;
     }
-    console.log("!!! parseBasicString (start)", this);
-    let res = this.parseTaggedString(super.parseBasicString);
-    return res;
+    console.log(
+      "!!! parseValue, start is",
+      this.state.start,
+      "stack is",
+      this.stack.map((state) => state.parser)
+    );
+    return super.parseValue();
   }
+
+  // parseBasicString() {
+  //   if (!this.state.start) {
+  //     this.state.start = this.pos - 1;
+  //   }
+  //   console.log(
+  //     "!!! parseBasicString, start is",
+  //     this.state.start,
+  //     "stack is",
+  //     this.stack.map((state) => state.parser)
+  //   );
+  //   // let res = this.parseTaggedString(super.parseBasicString);
+  //   // return res;
+  //   return super.parseBasicString();
+  // }
 
   call(fn, returnWith) {
     let oldStart = this.state.start;
@@ -53,45 +73,6 @@ class TaggedTOMLParser extends TOMLParser {
     return ret;
   }
 
-  parseMultiString() {
-    return this.parseTaggedString(super.parseMultiString);
-  }
-
-  parseMultiEnd2() {
-    this.parseTaggedMultiEnd(super.parseMultiEnd2);
-  }
-
-  parseLiteralString() {
-    return this.parseTaggedString(super.parseLiteralString);
-  }
-
-  parseLiteralMultiString() {
-    return this.parseTaggedString(super.parseLiteralMultiString);
-  }
-
-  parseLiteralMultiEnd2() {
-    this.parseTaggedMultiEnd(super.parseLiteralMultiEnd2);
-  }
-
-  parseTaggedString(fn) {
-    /// we're already one character into the content
-    /// of the string by that point
-    let start = this.pos - 1;
-    let stateStart = this.state.start;
-    console.log("in parseTaggedString, state start = ", this.state.start);
-    fn.call(this);
-    /// we're already one character into the delimiter
-    /// by that point
-    let end = this.pos - 1;
-
-    this.state.returned = {
-      [_taggedString]: true,
-      start: stateStart ? stateStart : start,
-      end,
-      value: this.state.returned,
-    };
-  }
-
   return(value) {
     let oldState = this.state;
     super.return(value);
@@ -101,12 +82,22 @@ class TaggedTOMLParser extends TOMLParser {
       "to",
       this.state.parser,
       "with value",
-      this.state.returned,
+      JSON.stringify(this.state.returned, null, 2),
       "start was",
       oldState.start,
       "pos is now",
       this.pos
     );
+
+    if (oldState.start) {
+      console.log("while returning, had oldState.start", oldState.start);
+      this.state.returned = {
+        [_taggedValue]: true,
+        start: oldState.start,
+        end: this.pos,
+        value: this.state.returned,
+      };
+    }
   }
 
   parseTaggedMultiEnd(fn) {
@@ -146,7 +137,7 @@ function replaceTomlString(input, path, newValue) {
     return input;
   }
 
-  if (!val[_taggedString]) {
+  if (!val[_taggedValue]) {
     throw new Error(
       `Value to replace is not a string, it's ${JSON.stringify(val, null, 2)}`
     );
@@ -154,7 +145,7 @@ function replaceTomlString(input, path, newValue) {
 
   let before = input.slice(0, val.start);
   let after = input.slice(val.end);
-  let output = before + newValue + after;
+  let output = before + JSON.stringify(newValue) + after;
 
   try {
     parseWith(output, TOMLParser);

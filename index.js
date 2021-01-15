@@ -8,11 +8,21 @@ const TOML = require("@iarna/toml");
 function main() {
   // tryPkgUpgrade(`samples/sample1.lock`, "main", "3.0");
 
-  // for (const n of [1, 2, 3, 4, 5, 7, 8]) {
-  //   tryUpgrade(`samples/sample${n}.toml`, "tokio", "2.0");
-  // }
-
-  tryUpgrade(`samples/sample8.toml`, "tokio", "2.0");
+  const sampleNames = [
+    "basicStringAsString",
+    "basicStringInlineTables",
+    "basicStringKey",
+    "basicStringTable",
+    "basicStringTableMulti",
+    "basicStringWithEscapes",
+    "literalMultiString",
+    "literalString",
+    "multiString",
+    "numericValue",
+  ];
+  for (const sampleName of sampleNames) {
+    tryUpgrade(`samples/${sampleName}.toml`, "tokio", "2.0");
+  }
 }
 
 function tryUpgrade(filePath, depName, version) {

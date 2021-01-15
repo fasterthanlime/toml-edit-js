@@ -1,0 +1,6 @@
+[package]
+name = "okay"
+version = "sure"
+
+[dependencies.tokio]
+version = 1
