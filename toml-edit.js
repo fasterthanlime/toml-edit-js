@@ -6,7 +6,51 @@ const _taggedString = Symbol("__TAGGED_STRING");
 
 class TaggedTOMLParser extends TOMLParser {
   parseBasicString() {
-    return this.parseTaggedString(super.parseBasicString);
+    if (!this.state.start) {
+      this.state.start = this.pos - 1;
+    }
+    console.log("!!! parseBasicString (start)", this);
+    let res = this.parseTaggedString(super.parseBasicString);
+    return res;
+  }
+
+  call(fn, returnWith) {
+    let oldStart = this.state.start;
+    super.call(fn, returnWith);
+    if (oldStart) {
+      console.log(
+        "calling",
+        fn,
+        "returning with",
+        returnWith,
+        "setting start to",
+        oldStart
+      );
+      this.stack[this.stack.length - 1].start = oldStart;
+    }
+  }
+
+  next(fn) {
+    let oldState = this.state;
+    let oldStart = this.state.start;
+    super.next(fn);
+    if (oldStart) {
+      console.log(
+        "next-ing from",
+        oldState.parser,
+        "to",
+        fn,
+        "setting start to",
+        oldStart
+      );
+      this.state.start = oldStart;
+    }
+  }
+
+  runOne() {
+    console.log("runOne", this.state.parser, "start is", this.state.start);
+    let ret = super.runOne();
+    return ret;
   }
 
   parseMultiString() {
@@ -33,6 +77,8 @@ class TaggedTOMLParser extends TOMLParser {
     /// we're already one character into the content
     /// of the string by that point
     let start = this.pos - 1;
+    let stateStart = this.state.start;
+    console.log("in parseTaggedString, state start = ", this.state.start);
     fn.call(this);
     /// we're already one character into the delimiter
     /// by that point
@@ -40,10 +86,27 @@ class TaggedTOMLParser extends TOMLParser {
 
     this.state.returned = {
       [_taggedString]: true,
-      start,
+      start: stateStart ? stateStart : start,
       end,
       value: this.state.returned,
     };
+  }
+
+  return(value) {
+    let oldState = this.state;
+    super.return(value);
+    console.log(
+      "returned from",
+      oldState.parser,
+      "to",
+      this.state.parser,
+      "with value",
+      this.state.returned,
+      "start was",
+      oldState.start,
+      "pos is now",
+      this.pos
+    );
   }
 
   parseTaggedMultiEnd(fn) {

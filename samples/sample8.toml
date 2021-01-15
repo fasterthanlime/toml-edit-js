@@ -1,6 +1,6 @@
 [package]
-name = "okay"
-version = "sure"
+# name = "okay"
+# version = "sure"
 
 [dependencies.tokio]
 version = "0.\t1.4"
